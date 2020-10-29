@@ -55,3 +55,12 @@ class BaseRecordingExtractorInterface(BaseDataInterface):
         se.NwbRecordingExtractor.write_recording(recording_extractor,
                                                  nwbfile=nwbfile,
                                                  metadata=metadata_dict)
+
+
+def recording_extractor_class_to_data_interface_class(RX):
+    return type(
+        RX.__name__ + 'DataInterface',  # class name
+        (BaseRecordingExtractorInterface,),  # base classes
+        dict(RX=RX)
+    )
+
