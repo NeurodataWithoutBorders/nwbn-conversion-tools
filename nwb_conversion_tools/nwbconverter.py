@@ -117,7 +117,7 @@ class NWBConverter:
             )
         nwbfile = NWBFile(**nwbfile_kwargs)
 
-        # If conversion_options is valid, procede to run conversions for DataInterfaces
+        # If conversion_options is valid, proceed to run conversions for DataInterfaces
         for interface_name, data_interface in self.data_interface_objects.items():
             data_interface.run_conversion(nwbfile, metadata, **conversion_options.get(interface_name, dict()))
 
@@ -131,3 +131,35 @@ class NWBConverter:
             print(f'NWB file saved at {nwbfile_path}')
         else:
             return nwbfile
+
+
+def dynamic_nwb_converter(
+        data_interface_classes: dict,
+        name: str = 'DynamicNWBConverter',
+        dict_: dict = None
+        ) -> NWBConverter:
+    """Create NWBConverter on the fly.
+
+    Parameters
+    ----------
+    data_interface_classes: dict
+    name: str, optional
+        Name of NWBConverter, default is DynamicNWBConverter
+    dict_: dict, optional
+        key, value pairs to be added to the resulting class
+
+    Returns
+    -------
+    NWBConverter
+
+    """
+    if dict_ is None:
+        dict_ = dict()
+    return type(
+        name,
+        (NWBConverter, ),
+        dict(
+            data_interface_classes=data_interface_classes,
+            **dict_
+        )
+    )
