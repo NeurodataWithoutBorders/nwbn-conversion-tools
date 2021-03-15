@@ -1,0 +1,55 @@
+metadata:
+  NWBFile:
+    lab: 'My Lab'
+    institution: 'My Institution'
+
+experiment_types:
+  - ymaze:
+    metadata:
+      NWBFile:
+        session_description: "maze is shaped like a Y"
+    source_data_types:
+      - name: plexon
+        data_interface: PlexonRecordingExtractorInterface
+      - name: deeplabcut
+        data_interface: DeepLabCutInterface
+
+    sessions:
+      - output_path: filepath1.nwb
+        source_data:
+          plexon:
+            filepath: rawdata1.plx
+          deeplabcut:
+            directory: dlc_folder1
+        metadata:
+          NWBFile:
+            session_start_time: "2020-11-09T21:19:09+00:00"
+          Subject:
+            subject_id: '001'
+      - output_path: filepath2.nwb
+        metadata:
+          NWBFile:
+            session_start_time: "2020-11-10T21:19:09+00:00"
+          Subject:
+            subject_id: '002'
+        source_data:
+          plexon:
+            filepath: rawdata2.plx
+          deeplabcut:
+            directory: dlc_folder2
+
+  - open_explore:
+      source_data_types:
+        - name: plexon
+          data_interface: PlexonRecordingExtractorInterface
+
+      sessions:
+        - output_path: filepath3.nwb
+          source_data:
+          plexon:
+            filepath: rawdata3.plx
+          metadata:
+            NWBFile:
+              session_start_time: "2020-11-10T21:19:09+00:00"
+            Subject:
+              subject_id: '002'
