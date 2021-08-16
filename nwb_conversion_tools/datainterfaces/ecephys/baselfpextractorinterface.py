@@ -8,7 +8,7 @@ from pynwb.device import Device
 from pynwb.ecephys import ElectrodeGroup
 
 from .baserecordingextractorinterface import BaseRecordingExtractorInterface
-from ...utils.spike_interface import write_recording
+from ...utils import export_ecephys_to_nwb
 from ...utils.json_schema import get_schema_from_hdmf_class, get_base_schema
 
 OptionalPathType = Optional[Union[str, Path]]
@@ -61,7 +61,7 @@ class BaseLFPExtractorInterface(BaseRecordingExtractorInterface):
             recording = self.subset_recording(stub_test=stub_test)
         else:
             recording = self.recording_extractor
-        write_recording(
+        export_ecephys_to_nwb(
             recording=recording,
             nwbfile=nwbfile,
             metadata=metadata,
