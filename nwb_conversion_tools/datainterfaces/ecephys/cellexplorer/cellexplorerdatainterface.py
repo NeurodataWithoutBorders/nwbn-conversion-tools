@@ -14,8 +14,8 @@ class CellExplorerSortingInterface(BaseSortingExtractorInterface):
 
     SX = se.CellExplorerSortingExtractor
 
-    def __init__(self, spikes_matfile_path: FilePathType):
-        super().__init__(spikes_matfile_path=spikes_matfile_path)
+    def __init__(self, file_path: FilePathType):
+        super().__init__(spikes_matfile_path=file_path)
 
     def get_metadata(self):
         session_path = Path(self.source_data["spikes_matfile_path"]).parent

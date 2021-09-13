@@ -1,4 +1,4 @@
-"""Authors: Steffen Buergers"""
+"""Authors: Steffen Buergers."""
 import os
 import dateutil
 import numpy as np
@@ -9,7 +9,7 @@ import spikeextractors as se
 from pynwb import NWBFile
 from pynwb.behavior import Position, SpatialSeries
 
-from ....utils.json_schema import get_schema_from_method_signature, FilePathType
+from ....utils.json_schema import FilePathType
 from ....basedatainterface import BaseDataInterface
 from ..baserecordingextractorinterface import BaseRecordingExtractorInterface
 from ..baselfpextractorinterface import BaseLFPExtractorInterface
@@ -17,14 +17,14 @@ from ....utils.conversion_tools import get_module
 
 
 # Helper functions for AxonaRecordingExtractorInterface
-def parse_generic_header(filename: FilePathType, params: Union[list, set]):
+def parse_generic_header(file_path: FilePathType, params: Union[list, set]):
     """
     Given a binary file with phrases and line breaks, enters the
     first word of a phrase as dictionary key and the following
     string (without linebreaks) as value. Returns the dictionary.
 
     INPUT
-    filename (str): .set file path and name.
+    file_path (str): .set file path and name.
     params (list or set): parameter names to search for.
 
     OUTPUT
@@ -37,7 +37,7 @@ def parse_generic_header(filename: FilePathType, params: Union[list, set]):
     header = dict()
     if params is not None:
         params = set(params)
-    with open(filename, "rb") as f:
+    with open(file_path, "rb") as f:
         for bin_line in f:
             if b"data_start" in bin_line:
                 break
@@ -70,8 +70,8 @@ class AxonaRecordingExtractorInterface(BaseRecordingExtractorInterface):
 
     RX = se.AxonaRecordingExtractor
 
-    def __init__(self, filename: FilePathType):
-        super().__init__(filename=filename)
+    def __init__(self, file_path: FilePathType):
+        super().__init__(filename=file_path)
 
     def get_metadata(self):
 
@@ -121,22 +121,13 @@ class AxonaUnitRecordingExtractorInterface(AxonaRecordingExtractorInterface):
 
     @classmethod
     def get_source_schema(cls):
-        return dict(
-            required=["filename"],
-            properties=dict(
-                filename=dict(
-                    type="string",
-                    format="file",
-                    description="Path to Axona file",
-                ),
-                noise_std=dict(type="number"),
-            ),
-            type="object",
-        )
+        schema = super().get_source_schema()
+        schema["properties"]["file_path"].update(description="Path to Axona file")
+        return schema
 
-    def __init__(self, filename: FilePathType, noise_std: float = 3.5):
-        super().__init__(filename=filename)
-        self.recording_extractor = se.AxonaUnitRecordingExtractor(filename=filename, noise_std=noise_std)
+    def __init__(self, file_path: FilePathType, noise_std: float = 3.5):
+        super().__init__(filename=file_path)
+        self.recording_extractor = se.AxonaUnitRecordingExtractor(filename=file_path, noise_std=noise_std)
 
 
 # Helper functions for AxonaPositionDataInterface
@@ -325,7 +316,7 @@ def read_pos_file_position_data(pos_filename: FilePathType):
     return pos_data
 
 
-def get_position_object(filename: FilePathType):
+def get_position_object(file_path: FilePathType):
     """
     Read position data from .bin or .pos file and convert to
     pynwb.behavior.SpatialSeries objects. If possible it should always
@@ -334,8 +325,8 @@ def get_position_object(filename: FilePathType):
 
     Parameters:
     ----------
-    filename (Path or Str):
-        Full filename of Axona file with any extension.
+    file_path (Path or Str):
+        Full file_path of Axona file with any extension.
 
     Returns:
     -------
@@ -355,10 +346,10 @@ def get_position_object(filename: FilePathType):
         "unused",
     ]
 
-    if Path(filename).suffix == ".bin":
-        position_data = read_bin_file_position_data(filename)
+    if Path(file_path).suffix == ".bin":
+        position_data = read_bin_file_position_data(file_path)
     else:
-        position_data = read_pos_file_position_data(filename)
+        position_data = read_pos_file_position_data(file_path)
 
     position_timestamps = position_data[:, 0]
 
@@ -378,12 +369,8 @@ def get_position_object(filename: FilePathType):
 class AxonaPositionDataInterface(BaseDataInterface):
     """Primary data interface class for converting Axona position data"""
 
-    @classmethod
-    def get_source_schema(cls):
-        return get_schema_from_method_signature(cls.__init__)
-
-    def __init__(self, filename: str):
-        super().__init__(filename=filename)
+    def __init__(self, file_path: str):
+        super().__init__(filename=file_path)
 
     def run_conversion(self, nwbfile: NWBFile, metadata: dict):
         """
@@ -394,11 +381,11 @@ class AxonaPositionDataInterface(BaseDataInterface):
         nwbfile : NWBFile
         metadata : dict
         """
-        filename = self.source_data["filename"]
+        file_path = self.source_data["filename"]
 
         # Create or update processing module for behavioral data
         behavior_module = get_module(nwbfile=nwbfile, name="behavior", description="behavioral data")
-        behavior_module.add(get_position_object(filename))
+        behavior_module.add(get_position_object(file_path))
 
 
 # Helper functions for AxonaLFPDataInterface
@@ -530,10 +517,10 @@ class AxonaLFPDataInterface(BaseLFPExtractorInterface):
             additionalProperties=False,
         )
 
-    def __init__(self, filename: FilePathType):
+    def __init__(self, file_path: FilePathType):
         self.recording_extractor = se.NumpyRecordingExtractor(
-            timeseries=read_all_eeg_file_lfp_data(filename),
-            sampling_frequency=get_eeg_sampling_frequency(filename),
+            timeseries=read_all_eeg_file_lfp_data(file_path),
+            sampling_frequency=get_eeg_sampling_frequency(file_path),
         )
         self.subset_channels = None
-        self.source_data = dict(filename=filename)
+        self.source_data = dict(filename=file_path)
