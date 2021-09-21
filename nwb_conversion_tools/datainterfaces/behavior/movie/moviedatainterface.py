@@ -13,7 +13,12 @@ from hdmf.data_utils import DataChunkIterator
 
 from ....basedatainterface import BaseDataInterface
 from ....utils.conversion_tools import check_regular_timestamps, get_module
-from ....utils.json_schema import get_schema_from_method_signature
+from ....utils.json_schema import (
+    get_schema_from_method_signature,
+    FilePathType,
+    get_schema_from_hdmf_class,
+    get_base_schema,
+)
 from .movie_utils import get_movie_timestamps, get_movie_fps, get_frame_shape
 
 
@@ -46,6 +51,25 @@ class MovieInterface(BaseDataInterface):
     def get_source_schema(cls):
         return get_schema_from_method_signature(cls.__init__)
 
+    def get_metadata_schema(self):
+        metadata_schema = super().get_metadata_schema()
+        metadata_schema["properties"]["acquisition"] = get_base_schema(tag="acquisition")
+        metadata_schema["properties"]["acquisition"]["required"] = ["ImageSeries"]
+        metadata_schema["properties"]["acquisition"]["properties"] = dict(
+            Imageseries=dict(type="array", items=get_schema_from_hdmf_class(ImageSeries))
+        )
+        return metadata_schema
+
+    def get_metadata(self):
+        metadata = super().get_metadata()
+        metadata["acquisition"] = dict(
+            ImageSeries=[
+                dict(name=f"Video: {Path(file_path).stem}", description="Video recorded by camera.", unit="Frames")
+                for file_path in self.source_data["file_paths"]
+            ]
+        )
+        return metadata
+
     def run_conversion(
         self,
         nwbfile: NWBFile,
@@ -72,7 +96,7 @@ class MovieInterface(BaseDataInterface):
             data sharing, the video files must be contained in the same folder as the NWBFile. If the intention of this
             NWBFile involves an upload to DANDI, the non-NWBFile types are not allowed so this flag would have to be
             set to False. The default is True.
-        starting_times : list, optional
+        starting_time : list, optional
             List of start times for each movie. If unspecified, assumes that the movies in the file_paths list are in
             sequential order and are contiguous.
         chunk_data : bool, optional
@@ -101,6 +125,12 @@ class MovieInterface(BaseDataInterface):
             ), "Argument 'starting_times' must be a list of floats in one-to-one correspondence with 'file_paths'!"
         else:
             starting_times = [0.0]
+        nwb_module = "acquisition" if module_name is None else module_name
+        if nwb_module in metadata and "ImageSeries" in metadata[nwb_module]:
+            image_series_kwargs_list = metadata[nwb_module]["ImageSeries"]
+        else:
+            image_series_kwargs_list = self.get_metadata()
+        assert len(image_series_kwargs_list) == len(self.source_data["file_paths"])
 
         for j, file in enumerate(file_paths):
             timestamps = starting_times[j] + get_movie_timestamps(movie_file=file)
@@ -108,9 +138,7 @@ class MovieInterface(BaseDataInterface):
             if len(starting_times) != len(file_paths):
                 starting_times.append(timestamps[-1])
 
-            image_series_kwargs = dict(
-                name=f"Video: {Path(file).stem}", description="Video recorded by camera.", unit="Frames"
-            )
+            image_series_kwargs = image_series_kwargs_list[j]
             if check_regular_timestamps(ts=timestamps):
                 fps = get_movie_fps(movie_file=file)
                 image_series_kwargs.update(starting_time=starting_times[j], rate=fps)
